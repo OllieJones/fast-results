@@ -8,9 +8,9 @@
  *
  * @wordpress-plugin
  * Plugin Name:   Fast Results
- * Plugin URI:    https://www.plumislandmedia.net/fast-results/
+ * Plugin URI:    https://plumislandmedia.net/wordpress-plugins/fast-results/
  * Description:   Speed up the generation of large site result pages.
- * Version:       0.1.1
+ * Version:       0.1.2
  * Author:        Ollie Jones
  * Author URI:    https://github.com/OllieJones
  * Text Domain:   fast-results
@@ -19,12 +19,13 @@
  * License URI:   https://www.gnu.org/licenses/gpl-2.0.html
  *
  * You should have received a copy of the GNU General Public License
- * along with Post from Email. If not, see <https://www.gnu.org/licenses/gpl-2.0.html/>.
+ * along with Fast Results. If not, see <https://www.gnu.org/licenses/gpl-2.0.html/>.
  */
 
 namespace Fast_Results;
 
 use WP_Query;
+use wpdb;
 
 // Exit if accessed directly.
 if ( ! defined( 'ABSPATH' ) ) {
@@ -38,8 +39,6 @@ class FastResults {
   private $stubs_to_intervene = array();
 
   public static function init() {
-//    error_log('init');
-
     $instance = self::getInstance();
   }
 
@@ -63,9 +62,6 @@ class FastResults {
    * like is_main_query() test against the global $wp_query instance, not the passed one.
    *
    * @param WP_Query $query The WP_Query instance (passed by reference).
-   *
-   * @since 2.0.0
-   *
    */
   public function pre_get_posts( $query ) {
     if ( $this->initialized ) {
@@ -87,9 +83,6 @@ class FastResults {
    *
    * @param string $request The complete SQL query.
    * @param WP_Query $query The WP_Query instance (passed by reference).
-   *
-   * @since 2.0.0
-   *
    */
   public function posts_request( $request, $query ) {
     if ( ! isset( $query->query_vars['no_found_rows'] ) || ! $query->query_vars['no_found_rows'] ) {
@@ -118,9 +111,6 @@ class FastResults {
    *
    * @param string $request The query to run to find the found posts.
    * @param WP_Query $query The WP_Query instance (passed by reference).
-   *
-   * @since 2.1.0
-   *
    */
   public function found_posts_query( $request, $query ) {
     if ( isset( $query->query_vars['fast-results-key'] ) ) {
@@ -137,9 +127,6 @@ class FastResults {
    *
    * @param int $found_posts The number of posts found.
    * @param WP_Query $query The WP_Query instance (passed by reference).
-   *
-   * @since 2.1.0
-   *
    */
   public function found_posts( $found_posts, $query ) {
     if ( isset( $query->query_vars['fast-results-key'] ) ) {
@@ -155,13 +142,7 @@ class FastResults {
   /**
    * Filters the database query.
    *
-   * Some queries are made before the plugins have been loaded,
-   * and thus cannot be filtered with this method.
-   *
    * @param string $query Database query.
-   *
-   * @since 2.1.0
-   *
    */
   public function query( $query ) {
     if ( str_contains( $query, 'SQL_CALC_FOUND_ROWS' ) ) {
@@ -237,10 +218,7 @@ class FastResults {
       $last_changed .= wp_cache_get_last_changed( 'terms' );
     }
 
-    $key = md5( serialize( $args ) . $sql . $last_changed );
-
-
-    return 'fast_results:' . $key;
+    return md5( serialize( $args ) . $sql . $last_changed );
   }
 
   /**
@@ -259,24 +237,11 @@ class FastResults {
 
 }
 
-/**
- * HELPER COMMENT START
- *
- * This file contains the main information about the plugin.
- * It is used to register all components necessary to run the plugin.
- *
- * The comment above contains all information about the plugin
- * that are used by WordPress to differentiate the plugin and register it properly.
- * It also contains further PHPDocs parameter for a better documentation
- *
- * HELPER COMMENT END
- */
-
 // Plugin name
 const FAST_RESULTS_NAME = 'Fast Results';
 
 // Plugin version
-const FAST_RESULTS_VERSION = '0.1.1';
+const FAST_RESULTS_VERSION = '0.1.2';
 
 // Plugin Root File
 const FAST_RESULTS_PLUGIN_FILE = __FILE__;
@@ -301,15 +266,13 @@ add_action( 'init', array( 'Fast_Results\FastResults', 'init' ) );
 
 
 function activate() {
-//    error_log('activate');
   register_uninstall_hook( __FILE__, 'Fast_Results\uninstall' );
 }
 
 function deactivate() {
-//    error_log('deactivate');
-
+  wp_cache_flush_group( 'fast-results-found-rows' );
 }
 
 function uninstall() {
-//    error_log('uninstall');
+
 }
